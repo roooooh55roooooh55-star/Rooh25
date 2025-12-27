@@ -162,15 +162,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex items-center gap-6 flex-1 overflow-hidden">
                   <div className="w-32 h-20 bg-black rounded-3xl overflow-hidden border-2 border-white/5 shrink-0 relative">
                     <video src={v.video_url} className="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                       <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
-                    </div>
                   </div>
                   <div className="flex flex-col gap-2">
                     <h3 className="text-base font-black text-white line-clamp-1">{v.title}</h3>
                     <div className="flex gap-3">
                       <span className="text-[10px] bg-red-600/10 text-red-500 px-3 py-1 rounded-full uppercase font-black border border-red-600/20">{v.category}</span>
-                      <span className="text-[10px] text-gray-500 font-black italic tracking-widest">{v.type.toUpperCase()}</span>
                     </div>
                   </div>
                 </div>
@@ -191,7 +187,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Editor Modal */}
       {editingVideo && (
         <VideoEditor 
           video={editingVideo} 
@@ -216,61 +211,68 @@ const VideoEditor: React.FC<{ video: Video, categories: string[], onClose: () =>
     setIsAiLoading(false);
   };
 
+  const addQuickTag = (tag: string) => {
+    setV(prev => ({ ...prev, tags: Array.from(new Set([...(prev.tags || []), tag])) }));
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] bg-black/98 backdrop-blur-3xl p-10 flex flex-col animate-in fade-in duration-500" dir="rtl">
       <div className="flex items-center justify-between mb-12 border-b-2 border-white/10 pb-6">
-        <h2 className="text-3xl font-black italic text-red-600 tracking-tighter shadow-red-600">تعديل سجل الكابوس</h2>
-        <button onClick={onClose} className="p-4 text-gray-500 hover:text-white transition-colors active:rotate-90 duration-300"><svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+        <h2 className="text-3xl font-black italic text-red-600 tracking-tighter">تعديل سجل الكابوس</h2>
+        <button onClick={onClose} className="p-4 text-gray-500 hover:text-white transition-colors"><svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-12 max-w-4xl mx-auto w-full pb-32 scrollbar-hide">
-        {/* Live Preview - منطقة المعاينة الحية للفيديو */}
-        <div className="aspect-video bg-black rounded-[3rem] overflow-hidden border-4 border-white/5 shadow-[0_0_50px_rgba(0,0,0,1)] relative group">
+        <div className="aspect-video bg-black rounded-[3rem] overflow-hidden border-4 border-white/5 relative">
           <video src={v.video_url} controls className="w-full h-full object-contain" />
-          <div className="absolute top-6 right-6 bg-red-600/80 backdrop-blur-md px-5 py-2 rounded-full text-[12px] text-white font-black border border-white/20 shadow-2xl">LIVE PREVIEW</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-4">
-            <label className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] px-4">عنوان الكابوس</label>
+            <label className="text-xs font-black text-gray-500 uppercase px-4">عنوان الكابوس</label>
             <input 
               type="text" value={v.title} onChange={e => setV({...v, title: e.target.value})}
-              className="w-full bg-neutral-900 border-2 border-white/5 rounded-[2rem] p-6 text-white text-lg font-black outline-none focus:border-red-600 shadow-inner transition-all"
+              className="w-full bg-neutral-900 border-2 border-white/5 rounded-[2rem] p-6 text-white text-lg font-black outline-none focus:border-red-600"
             />
           </div>
 
           <div className="space-y-4">
-            <label className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] px-4">التصنيف المحرم</label>
-            <select value={v.category} onChange={e => setV({...v, category: e.target.value})} className="w-full bg-neutral-900 border-2 border-white/5 rounded-[2rem] p-6 text-red-600 text-lg font-black outline-none focus:border-red-600 transition-all appearance-none">
+            <label className="text-xs font-black text-gray-500 uppercase px-4">التصنيف</label>
+            <select value={v.category} onChange={e => setV({...v, category: e.target.value})} className="w-full bg-neutral-900 border-2 border-white/5 rounded-[2rem] p-6 text-red-600 text-lg font-black outline-none focus:border-red-600">
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
           <div className="md:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-4">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-[0.3em]">الأوسمة الرقمية (Tags)</label>
-              <button onClick={handleAiTags} disabled={isAiLoading} className="text-[12px] bg-red-600 text-white px-6 py-2 rounded-full font-black active:scale-95 flex items-center gap-3 shadow-[0_0_20px_red] transition-all">
-                {isAiLoading ? 'جاري الاستحضار...' : '✨ استدعاء بذكاء Gemini'}
-              </button>
+              <label className="text-xs font-black text-gray-500 uppercase">الأوسمة (Tags)</label>
+              <div className="flex gap-2">
+                <button onClick={() => addQuickTag('supernatural')} className="text-[8px] bg-purple-600/20 border border-purple-600 px-3 py-1 rounded-full font-black text-purple-400">+ supernatural</button>
+                <button onClick={() => addQuickTag('haunted')} className="text-[8px] bg-blue-600/20 border border-blue-600 px-3 py-1 rounded-full font-black text-blue-400">+ haunted</button>
+                <button onClick={() => addQuickTag('ghost')} className="text-[8px] bg-green-600/20 border border-green-600 px-3 py-1 rounded-full font-black text-green-400">+ ghost</button>
+                <button onClick={handleAiTags} disabled={isAiLoading} className="text-[10px] bg-red-600 text-white px-6 py-2 rounded-full font-black active:scale-95">
+                  {isAiLoading ? 'جاري...' : '✨ استدعاء الذكاء'}
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3 p-8 bg-neutral-900/40 rounded-[2.5rem] border-2 border-white/5 min-h-[120px] shadow-inner">
+            <div className="flex flex-wrap gap-3 p-8 bg-neutral-900/40 rounded-[2.5rem] border-2 border-white/5 min-h-[120px]">
               {v.tags?.map((tag, i) => (
-                <span key={i} className="bg-red-600/10 text-red-500 border-2 border-red-600/30 text-xs font-black px-5 py-2.5 rounded-2xl flex items-center gap-3 group/tag hover:bg-red-600 hover:text-white transition-all">
+                <span key={i} className="bg-red-600/10 text-red-500 border-2 border-red-600/30 text-xs font-black px-5 py-2.5 rounded-2xl flex items-center gap-3">
                   #{tag}
-                  <button onClick={() => setV({...v, tags: v.tags?.filter((_,idx)=>idx!==i)})} className="text-red-900 group-hover/tag:text-white font-black text-lg">×</button>
+                  <button onClick={() => setV({...v, tags: v.tags?.filter((_,idx)=>idx!==i)})} className="text-red-900 hover:text-white font-black">×</button>
                 </span>
               ))}
               <input 
-                type="text" placeholder="أضف وسماً جديداً واضغط Enter..." value={tagInput}
+                type="text" placeholder="أضف وسماً واضغط Enter..." value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => { if(e.key === 'Enter' && tagInput) { setV({...v, tags: [...(v.tags||[]), tagInput.replace('#','') ]}); setTagInput(''); } }}
-                className="bg-transparent border-none outline-none text-base text-gray-300 min-w-[200px] p-2"
+                className="bg-transparent border-none outline-none text-base text-gray-300 min-w-[200px]"
               />
             </div>
           </div>
         </div>
 
-        <button onClick={() => onSave(v)} className="w-full bg-red-600 py-8 rounded-[2.5rem] font-black text-white shadow-[0_0_40px_red] active:scale-95 transition-all text-2xl mt-12 hover:tracking-widest duration-500 uppercase">
+        <button onClick={() => onSave(v)} className="w-full bg-red-600 py-8 rounded-[2.5rem] font-black text-white shadow-[0_0_40px_red] active:scale-95 transition-all text-2xl">
           حفظ السجلات النهائية
         </button>
       </div>

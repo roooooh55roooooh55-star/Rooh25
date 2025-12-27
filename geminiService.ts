@@ -13,20 +13,21 @@ export async function suggestTags(title: string, category: string): Promise<stri
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `بناءً على عنوان فيديو الرعب: "${title}" والتصنيف: "${category}"، اقترح 5 أوسمة (tags) قصيرة. أرجعها كقائمة JSON فقط.`,
+      contents: `بناءً على عنوان فيديو الرعب: "${title}" والتصنيف: "${category}"، اقترح 5 أوسمة (tags) قصيرة. 
+      يجب أن تشمل الاقتراحات أوسمة مثل (supernatural, haunted, ghost) إذا كانت مناسبة. 
+      أرجعها كقائمة JSON فقط.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }
       }
     });
     return JSON.parse(response.text || '[]');
-  } catch (e) { return ["رعب", "غموض"]; }
+  } catch (e) { return ["supernatural", "haunted", "ghost", "رعب", "غموض"]; }
 }
 
 export async function getRecommendedFeed(allVideos: Video[], interactions: UserInteractions): Promise<string[]> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // تحليل الفئات المفضلة بناءً على الإعجابات
   const likedVideos = allVideos.filter(v => interactions.likedIds.includes(v.id));
   const favoriteCategories = Array.from(new Set(likedVideos.map(v => v.category)));
   
@@ -49,7 +50,8 @@ export async function getRecommendedFeed(allVideos: Video[], interactions: UserI
         responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }
       }
     });
-    return JSON.parse(response.text || "[]");
+    const result = JSON.parse(response.text || "[]");
+    return Array.isArray(result) ? result : allVideos.map(v => v.id);
   } catch (e) {
     return allVideos.map(v => v.id).sort(() => Math.random() - 0.5);
   }

@@ -25,52 +25,6 @@ const DEFAULT_CATEGORIES = [
   'لحظات مرعبة'
 ];
 
-const SearchOverlay: React.FC<{ 
-  videos: Video[], 
-  onClose: () => void, 
-  onPlayShort: (v: Video, l: Video[]) => void, 
-  onPlayLong: (v: Video) => void 
-}> = ({ videos, onClose, onPlayShort, onPlayLong }) => {
-  const [query, setQuery] = useState('');
-  const filtered = videos.filter(v => 
-    v.title.toLowerCase().includes(query.toLowerCase()) || 
-    v.category.toLowerCase().includes(query.toLowerCase())
-  );
-
-  return (
-    <div className="fixed inset-0 z-[1200] bg-black/95 backdrop-blur-2xl p-6 flex flex-col animate-in fade-in duration-300">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="relative flex-1">
-          <input 
-            autoFocus
-            type="text" 
-            placeholder="ابحث عن كابوسك..." 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-white/5 border-2 border-red-600/30 rounded-2xl py-4 px-12 text-white outline-none focus:border-red-600 transition-all"
-          />
-          <svg className="w-6 h-6 absolute right-4 top-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        </div>
-        <button onClick={onClose} className="p-4 bg-red-600 rounded-2xl text-white font-black active:scale-95 shadow-[0_0_20px_red]">إغلاق</button>
-      </div>
-      <div className="flex-1 overflow-y-auto space-y-4">
-        {filtered.map(v => (
-          <div key={v.id} onClick={() => v.type === 'short' ? onPlayShort(v, [v]) : onPlayLong(v)} className="flex gap-4 p-3 bg-white/5 rounded-2xl border border-white/10 active:scale-95 transition-all">
-            <div className={`w-24 shrink-0 bg-black rounded-xl overflow-hidden ${v.type === 'short' ? 'aspect-[9/16]' : 'aspect-video'}`}>
-              <video src={v.video_url} className="w-full h-full object-cover opacity-60" />
-            </div>
-            <div className="flex flex-col justify-center">
-              <h3 className="text-sm font-black text-white line-clamp-1 italic">{v.title}</h3>
-              <span className="text-[10px] text-red-500 font-bold uppercase mt-1">{v.category}</span>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && <p className="text-center text-gray-500 mt-20 font-bold">لا توجد نتائج مطابقة..</p>}
-      </div>
-    </div>
-  );
-};
-
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -98,25 +52,49 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleLikeToggle = (id: string) => {
+    setInteractions(p => {
+      const isAlreadyLiked = p.likedIds.includes(id);
+      if (isAlreadyLiked) {
+        return { ...p, likedIds: p.likedIds.filter(x => x !== id) };
+      }
+      
+      // الحفظ يتم فقط داخل مصفوفة التطبيق (savedIds) دون تحميل ملفات للهاتف
+      return { 
+        ...p, 
+        likedIds: [...p.likedIds, id], 
+        savedIds: Array.from(new Set([...p.savedIds, id])),
+        dislikedIds: p.dislikedIds.filter(x => x !== id) 
+      };
+    });
+    
+    if (!interactions.likedIds.includes(id)) {
+      showToast("تم الحفظ في خزنة التطبيق الداخلية! 💀");
+    }
+  };
+
   const loadData = useCallback(async (isHardRefresh = false) => {
-    setLoading(true); // دائماً نبدأ بالتحميل
+    setLoading(true);
     try {
       const data = await fetchCloudinaryVideos();
-      if (!data || data.length === 0) {
-        setRawVideos([]);
-      } else {
-        const recommendedOrder = await getRecommendedFeed(data, interactions);
-        const orderedVideos = recommendedOrder
-          .map(id => data.find(v => v.id === id || v.public_id === id))
-          .filter((v): v is Video => !!v);
-
-        const remaining = data.filter(v => !recommendedOrder.includes(v.id));
-        setRawVideos([...orderedVideos, ...remaining]);
-      }
+      // نضع الفيديوهات مباشرة لضمان عدم ظهور شاشة سوداء
+      setRawVideos(data || []);
+      
+      // تحسين الترتيب بالذكاء الاصطناعي في الخلفية دون تعطيل الواجهة
+      getRecommendedFeed(data, interactions).then(recommendedOrder => {
+        if (recommendedOrder && recommendedOrder.length > 0) {
+          const ordered = recommendedOrder
+            .map(id => data.find(v => v.id === id || v.public_id === id))
+            .filter((v): v is Video => !!v);
+          const remaining = data.filter(v => !recommendedOrder.includes(v.id));
+          setRawVideos([...ordered, ...remaining]);
+        }
+      }).catch(() => {});
     } catch (err) {
-      console.error("Load Data Error:", err);
+      console.error("Critical Load Error:", err);
     } finally {
-      setLoading(false); // نضمن انتهاء التحميل لمنع الشاشة السوداء
+      // نضمن إغلاق شاشة التحميل في كل الحالات
+      setLoading(false);
       if (isHardRefresh) {
         setIsTitleYellow(true);
         setTimeout(() => setIsTitleYellow(false), 2500);
@@ -124,8 +102,7 @@ const App: React.FC = () => {
     }
   }, [interactions]);
 
-  useEffect(() => { loadData(false); }, []); // تحميل أولي مرة واحدة
-
+  useEffect(() => { loadData(false); }, []);
   useEffect(() => { localStorage.setItem('al-hadiqa-interactions-v5', JSON.stringify(interactions)); }, [interactions]);
 
   const updateWatchHistory = (id: string, progress: number) => {
@@ -136,18 +113,6 @@ const App: React.FC = () => {
       else { history.push({ id, progress }); }
       return { ...prev, watchHistory: history };
     });
-  };
-
-  const handleLikeToggle = (id: string) => {
-    setInteractions(p => {
-      if (p.likedIds.includes(id)) {
-        return { ...p, likedIds: p.likedIds.filter(x => x !== id) };
-      }
-      return { ...p, likedIds: [...p.likedIds, id], dislikedIds: p.dislikedIds.filter(x => x !== id) };
-    });
-    if (!interactions.likedIds.includes(id)) {
-      showToast("الأرواح تعتز بإعجابك! 💀");
-    }
   };
 
   const handleDislike = (id: string) => {
@@ -161,32 +126,13 @@ const App: React.FC = () => {
     setSelectedLong(null);
   };
 
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(category);
-    setCurrentView(AppView.CATEGORY);
-    setSelectedShort(null);
-    setSelectedLong(null);
-  };
-
-  const handleSwitchLongVideo = (v: Video) => {
-    setSelectedLong(prev => prev ? { ...prev, video: v } : null);
-  };
-
   const renderContent = () => {
+    // إذا كان هناك بيانات (حتى لو احتياطية) نعرضها فوراً
     if (loading && rawVideos.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center pt-32 text-center">
           <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-red-600 font-black animate-pulse">جاري استحضار الأرواح...</p>
-        </div>
-      );
-    }
-
-    if (!loading && rawVideos.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center pt-32 text-center p-8">
-          <p className="text-gray-500 font-bold mb-4">تعذر الاتصال بالمستودع المحرم.</p>
-          <button onClick={() => loadData(true)} className="bg-red-600 px-6 py-2 rounded-xl font-black active:scale-95">محاولة مرة أخرى</button>
+          <p className="text-red-600 font-black animate-pulse">جاري استدعاء الأرواح...</p>
         </div>
       );
     }
@@ -199,9 +145,8 @@ const App: React.FC = () => {
       case AppView.TREND:
         return <TrendPage onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} excludedIds={interactions.dislikedIds} />;
       case AppView.LIKES:
-        return <SavedPage savedIds={interactions.likedIds} allVideos={rawVideos} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} title="الإعجابات" />;
       case AppView.SAVED:
-        return <SavedPage savedIds={interactions.savedIds} allVideos={rawVideos} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} title="المحفوظات" />;
+        return <SavedPage savedIds={[...interactions.likedIds, ...interactions.savedIds]} allVideos={rawVideos} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} title="خزنة المحفوظات" />;
       case AppView.HIDDEN:
         return <HiddenVideosPage interactions={interactions} allVideos={rawVideos} onRestore={(id) => setInteractions(prev => ({...prev, dislikedIds: prev.dislikedIds.filter(x => x !== id)}))} onPlayShort={(v, l) => setSelectedShort({video:v, list:l})} onPlayLong={(v) => setSelectedLong({video:v, list:longsOnly})} />;
       case AppView.PRIVACY:
@@ -222,7 +167,7 @@ const App: React.FC = () => {
             isTitleYellow={isTitleYellow}
             onSearchToggle={() => setIsSearchOpen(true)}
             isOverlayActive={isOverlayActive}
-            onCategorySelect={handleCategorySelect}
+            onCategorySelect={(cat) => { setSelectedCategory(cat); setCurrentView(AppView.CATEGORY); }}
             onLike={handleLikeToggle}
           />
         );
@@ -237,15 +182,6 @@ const App: React.FC = () => {
       <Suspense fallback={null}><AIOracle /></Suspense>
       {toast && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1100] bg-red-600 px-6 py-2 rounded-full font-bold shadow-lg shadow-red-600/40 text-xs">{toast}</div>}
       
-      {isSearchOpen && (
-        <SearchOverlay 
-          videos={rawVideos} 
-          onClose={() => setIsSearchOpen(false)} 
-          onPlayShort={(v, l) => { setSelectedShort({video:v, list:l}); setIsSearchOpen(false); }}
-          onPlayLong={(v) => { setSelectedLong({video:v, list:rawVideos.filter(x => x.type === 'long')}); setIsSearchOpen(false); }}
-        />
-      )}
-
       {selectedShort && (
         <Suspense fallback={null}>
           <ShortsPlayerOverlay 
@@ -255,9 +191,8 @@ const App: React.FC = () => {
             onClose={() => setSelectedShort(null)} 
             onLike={handleLikeToggle} 
             onDislike={handleDislike} 
-            onSave={(id) => setInteractions(p => p.savedIds.includes(id) ? p : ({...p, savedIds: [...p.savedIds, id]}))} 
+            onSave={handleLikeToggle} 
             onProgress={updateWatchHistory} 
-            onCategorySelect={handleCategorySelect}
           />
         </Suspense>
       )}
@@ -270,13 +205,12 @@ const App: React.FC = () => {
             onClose={() => setSelectedLong(null)} 
             onLike={() => handleLikeToggle(selectedLong.video.id)} 
             onDislike={() => handleDislike(selectedLong.video.id)} 
-            onSave={() => setInteractions(p => p.savedIds.includes(selectedLong.video.id) ? p : ({...p, savedIds: [...p.savedIds, selectedLong.video.id]}))} 
-            onSwitchVideo={handleSwitchLongVideo} 
+            onSave={() => handleLikeToggle(selectedLong.video.id)} 
+            onSwitchVideo={(v) => setSelectedLong(prev => prev ? { ...prev, video: v } : null)} 
             isLiked={interactions.likedIds.includes(selectedLong.video.id)} 
             isDisliked={interactions.dislikedIds.includes(selectedLong.video.id)} 
             isSaved={interactions.savedIds.includes(selectedLong.video.id)} 
             onProgress={(p) => updateWatchHistory(selectedLong.video.id, p)} 
-            onCategorySelect={handleCategorySelect}
           />
         </Suspense>
       )}
