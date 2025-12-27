@@ -247,17 +247,17 @@ const VideoEditor: React.FC<{ video: Video, categories: string[], onClose: () =>
             <div className="flex items-center justify-between px-4">
               <label className="text-xs font-black text-gray-500 uppercase">الأوسمة (Tags)</label>
               <div className="flex gap-2">
-                <button onClick={() => addQuickTag('supernatural')} className="text-[8px] bg-purple-600/20 border border-purple-600 px-3 py-1 rounded-full font-black text-purple-400">+ supernatural</button>
-                <button onClick={() => addQuickTag('haunted')} className="text-[8px] bg-blue-600/20 border border-blue-600 px-3 py-1 rounded-full font-black text-blue-400">+ haunted</button>
-                <button onClick={() => addQuickTag('ghost')} className="text-[8px] bg-green-600/20 border border-green-600 px-3 py-1 rounded-full font-black text-green-400">+ ghost</button>
-                <button onClick={handleAiTags} disabled={isAiLoading} className="text-[10px] bg-red-600 text-white px-6 py-2 rounded-full font-black active:scale-95">
+                <button onClick={() => addQuickTag('supernatural')} className="text-[8px] bg-purple-600/20 border border-purple-600 px-3 py-1 rounded-full font-black text-purple-400 active:scale-95 transition-transform">+ supernatural</button>
+                <button onClick={() => addQuickTag('haunted')} className="text-[8px] bg-blue-600/20 border border-blue-600 px-3 py-1 rounded-full font-black text-blue-400 active:scale-95 transition-transform">+ haunted</button>
+                <button onClick={() => addQuickTag('ghost')} className="text-[8px] bg-green-600/20 border border-green-600 px-3 py-1 rounded-full font-black text-green-400 active:scale-95 transition-transform">+ ghost</button>
+                <button onClick={handleAiTags} disabled={isAiLoading} className="text-[10px] bg-red-600 text-white px-6 py-2 rounded-full font-black active:scale-95 shadow-[0_0_15px_red]">
                   {isAiLoading ? 'جاري...' : '✨ استدعاء الذكاء'}
                 </button>
               </div>
             </div>
             <div className="flex flex-wrap gap-3 p-8 bg-neutral-900/40 rounded-[2.5rem] border-2 border-white/5 min-h-[120px]">
               {v.tags?.map((tag, i) => (
-                <span key={i} className="bg-red-600/10 text-red-500 border-2 border-red-600/30 text-xs font-black px-5 py-2.5 rounded-2xl flex items-center gap-3">
+                <span key={i} className="bg-red-600/10 text-red-500 border-2 border-red-600/30 text-xs font-black px-5 py-2.5 rounded-2xl flex items-center gap-3 animate-in zoom-in">
                   #{tag}
                   <button onClick={() => setV({...v, tags: v.tags?.filter((_,idx)=>idx!==i)})} className="text-red-900 hover:text-white font-black">×</button>
                 </span>

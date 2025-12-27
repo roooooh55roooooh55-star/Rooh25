@@ -138,6 +138,7 @@ const MainContent: React.FC<MainContentProps> = ({
   const longs = useMemo(() => filtered.filter(v => v.type === 'long'), [filtered]);
 
   const shortsGroup1 = useMemo(() => shorts.slice(0, 4), [shorts]);
+  // تم ضبط قسم رحلة سعيدة ليعرض 10 فيديوهات LTR
   const shortsHappyTrip = useMemo(() => shorts.slice(4, 14), [shorts]);
   const shortsGroup2 = useMemo(() => shorts.slice(14, 18), [shorts]);
 
@@ -159,10 +160,10 @@ const MainContent: React.FC<MainContentProps> = ({
         setStartY(0);
       }}
     >
-      {pullOffset > 30 && (
-        <div className="absolute top-0 left-0 w-full flex justify-center pt-2 z-50">
+      {pullOffset > 40 && (
+        <div className="absolute top-0 left-0 w-full flex justify-center pt-2 z-50 pointer-events-none">
           <p className="text-[10px] font-black text-red-600 animate-pulse bg-black/80 px-4 py-1 rounded-full border border-red-600/30 backdrop-blur-md">
-            {pullOffset > 90 ? 'أفلت لتحديث المستودع...' : 'اسحب لتحديث الأرواح...'}
+            {pullOffset > 95 ? 'أفلت الآن للتحديث...' : 'اسحب لتنشيط الحديقة...'}
           </p>
         </div>
       )}
@@ -172,7 +173,7 @@ const MainContent: React.FC<MainContentProps> = ({
           <img src={LOGO_URL} className="w-8 h-8 rounded-full border border-red-600 shadow-[0_0_10px_red]" />
           <h1 className={`text-base font-black italic ${isTitleYellow ? 'text-yellow-400' : 'text-red-600'}`}>الحديقة المرعبة</h1>
         </div>
-        <button onClick={onSearchToggle} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></button>
+        <button onClick={onSearchToggle} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></button>
       </section>
 
       {/* 1. مختارات سريعة */}
@@ -205,7 +206,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       </section>
 
-      {loading && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-black/80 px-4 py-1 rounded-full border border-yellow-500/30 text-yellow-500 font-black text-[10px] animate-pulse">جاري تحديث المستودع...</div>}
+      {loading && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-black/80 px-4 py-1 rounded-full border border-yellow-500/30 text-yellow-500 font-black text-[10px] animate-pulse">جاري تحديث الأرواح...</div>}
     </div>
   );
 };
