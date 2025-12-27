@@ -25,7 +25,6 @@ const DEFAULT_CATEGORIES = [
   'لحظات مرعبة'
 ];
 
-// واجهة البحث البسيطة والفعالة
 const SearchOverlay: React.FC<{ 
   videos: Video[], 
   onClose: () => void, 
@@ -100,22 +99,24 @@ const App: React.FC = () => {
   };
 
   const loadData = useCallback(async (isHardRefresh = false) => {
-    if (isHardRefresh) setLoading(true);
+    setLoading(true); // دائماً نبدأ بالتحميل
     try {
       const data = await fetchCloudinaryVideos();
-      if (!data || data.length === 0) return;
-      
-      const recommendedOrder = await getRecommendedFeed(data, interactions);
-      const orderedVideos = recommendedOrder
-        .map(id => data.find(v => v.id === id || v.public_id === id))
-        .filter((v): v is Video => !!v);
+      if (!data || data.length === 0) {
+        setRawVideos([]);
+      } else {
+        const recommendedOrder = await getRecommendedFeed(data, interactions);
+        const orderedVideos = recommendedOrder
+          .map(id => data.find(v => v.id === id || v.public_id === id))
+          .filter((v): v is Video => !!v);
 
-      const remaining = data.filter(v => !recommendedOrder.includes(v.id));
-      setRawVideos([...orderedVideos, ...remaining]);
+        const remaining = data.filter(v => !recommendedOrder.includes(v.id));
+        setRawVideos([...orderedVideos, ...remaining]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Load Data Error:", err);
     } finally {
-      setLoading(false);
+      setLoading(false); // نضمن انتهاء التحميل لمنع الشاشة السوداء
       if (isHardRefresh) {
         setIsTitleYellow(true);
         setTimeout(() => setIsTitleYellow(false), 2500);
@@ -123,14 +124,9 @@ const App: React.FC = () => {
     }
   }, [interactions]);
 
-  useEffect(() => { loadData(false); }, [loadData]);
-  useEffect(() => { localStorage.setItem('al-hadiqa-interactions-v5', JSON.stringify(interactions)); }, [interactions]);
+  useEffect(() => { loadData(false); }, []); // تحميل أولي مرة واحدة
 
-  useEffect(() => {
-    if (!isOverlayActive && rawVideos.length > 0) {
-      loadData(false);
-    }
-  }, [isOverlayActive, loadData]);
+  useEffect(() => { localStorage.setItem('al-hadiqa-interactions-v5', JSON.stringify(interactions)); }, [interactions]);
 
   const updateWatchHistory = (id: string, progress: number) => {
     setInteractions(prev => {
@@ -177,6 +173,24 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (loading && rawVideos.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center pt-32 text-center">
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-red-600 font-black animate-pulse">جاري استحضار الأرواح...</p>
+        </div>
+      );
+    }
+
+    if (!loading && rawVideos.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center pt-32 text-center p-8">
+          <p className="text-gray-500 font-bold mb-4">تعذر الاتصال بالمستودع المحرم.</p>
+          <button onClick={() => loadData(true)} className="bg-red-600 px-6 py-2 rounded-xl font-black active:scale-95">محاولة مرة أخرى</button>
+        </div>
+      );
+    }
+
     const longsOnly = rawVideos.filter(v => v.type === 'long');
 
     switch(currentView) {
@@ -218,7 +232,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <AppBar onViewChange={setCurrentView} onRefresh={() => loadData(false)} currentView={currentView} />
-      <main className="pt-20 max-w-lg mx-auto overflow-x-hidden">{renderContent()}</main>
+      <main className="pt-20 max-w-lg mx-auto overflow-x-hidden min-h-[80vh]">{renderContent()}</main>
 
       <Suspense fallback={null}><AIOracle /></Suspense>
       {toast && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1100] bg-red-600 px-6 py-2 rounded-full font-bold shadow-lg shadow-red-600/40 text-xs">{toast}</div>}
